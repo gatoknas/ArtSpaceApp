@@ -1,14 +1,21 @@
 package com.danielcanas.artspaceapp
 
+//import androidx.window.core.layout.WindowSizeClass
+
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,23 +46,28 @@ import com.danielcanas.artspaceapp.ui.theme.ArtSpaceAppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyApp(windowSizeClass: WindowSizeClass = currentWindowAdaptiveInfo().windowSizeClass){
+fun MyApp()
+{
 
-    //val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var showAppBar by remember { mutableStateOf(true) }
 
     MaterialTheme {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                    title = {
-                        Text("Art Space Gallery")
-                    },
-                    windowInsets = TopAppBarDefaults.windowInsets
-                )
+                if (!isLandscape) {
+                    TopAppBar(
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        title = {
+                            Text("Art Space Gallery")
+                        },
+                        windowInsets = TopAppBarDefaults.windowInsets
+                    )
+                }
             },
         ) { innerPadding ->
             ArtGallery(
@@ -68,9 +81,16 @@ fun MyApp(windowSizeClass: WindowSizeClass = currentWindowAdaptiveInfo().windowS
 @Composable
 fun ArtGallery(modifier: Modifier = Modifier) {
 
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+
+    //val showRightPane = windowSizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)
+    val showRightPane = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+
+
     var artSequence by remember { mutableStateOf(0) }
 
     BuildGalleryLayout(
+        showRightPane,
         artSequence,
         onNextClick = { artSequence = calculateNextSequence(artSequence) },
         onPreviousClick = { artSequence = calculatePreviousSequence(artSequence) }
@@ -87,6 +107,7 @@ private fun calculatePreviousSequence(currentSequence: Int): Int {
 
 @Composable
 fun BuildGalleryLayout(
+    showRightPane: Boolean,
     artSequence: Int,
     onNextClick: () -> Unit,
     onPreviousClick: () -> Unit,
@@ -94,11 +115,51 @@ fun BuildGalleryLayout(
 
     val scrollState = rememberScrollState()
 
-    Column  ( horizontalAlignment = Alignment.CenterHorizontally
-        , modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 90.dp).verticalScroll(scrollState)
-    ){
+    if (!showRightPane) {
+        SinglePanelGallery(scrollState, artSequence, onPreviousClick, onNextClick)
+    } else {
+        TwoPanelGallery(scrollState, artSequence, onPreviousClick, onNextClick)
+    }
+}
 
-        Surface( shadowElevation = 25.dp, modifier = Modifier.padding(16.dp)) {
+@Composable
+fun TwoPanelGallery(
+    scrollState: ScrollState,
+    artSequence: Int,
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit
+) {
+    Row (modifier = Modifier.fillMaxWidth().safeContentPadding())
+    {
+        SinglePanelGallery(scrollState, artSequence, onPreviousClick, onNextClick)
+        Spacer(modifier = Modifier.width(16.dp))
+        Surface (
+            shadowElevation = 25.dp,
+            modifier = Modifier.padding(25.dp).border(BorderStroke(1.dp, Color.Yellow)).width(300.dp))
+        {
+            Text(text = "This is my second panel")
+        }
+    }
+}
+
+@Composable
+private fun SinglePanelGallery(
+    scrollState: ScrollState,
+    artSequence: Int,
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            //.padding(start = 10.dp, end = 10.dp, top = 90.dp)
+            .border(BorderStroke(1.dp, Color.Green))
+            .padding(25.dp)
+            .width(300.dp)
+            .verticalScroll(scrollState)
+    ) {
+
+        Surface(shadowElevation = 25.dp, modifier = Modifier.padding(16.dp)) {
         }
 
         val imageResourceIds = listOf(
@@ -112,20 +173,20 @@ fun BuildGalleryLayout(
             0 -> painterResource(imageResourceIds[0])
             1 -> painterResource(imageResourceIds[1])
             2 -> painterResource(imageResourceIds[2])
-            else-> painterResource(imageResourceIds[3])
+            else -> painterResource(imageResourceIds[3])
         }
 
-            Image(
-                painter = myPicture,
-                contentDescription = "Image description",
-                modifier = Modifier
-                    .heightIn(max = 500.dp)
-                    .widthIn(max = 600.dp)
-                    .border(BorderStroke(1.dp, Color.Blue)),
-                contentScale = ContentScale.Crop
-            )
+        Image(
+            painter = myPicture,
+            contentDescription = "Image description",
+            modifier = Modifier
+                .heightIn(max = 500.dp)
+                .widthIn(max = 600.dp)
+                .border(BorderStroke(1.dp, Color.Blue)),
+            contentScale = ContentScale.Crop
+        )
 
-        Column (verticalArrangement = Arrangement.Center, modifier = Modifier.padding(16.dp)){
+        Column(verticalArrangement = Arrangement.Center, modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "My artistic picture",
                 color = Color.DarkGray,
@@ -141,16 +202,18 @@ fun BuildGalleryLayout(
             )
         }
 
-        Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween){
-            Button(onClick =
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Button(
+                onClick =
                 onPreviousClick
             ) {
                 Text(text = "Previous")
             }
 
-            Button(onClick =
+            Button(
+                onClick =
                 onNextClick
-             ) {
+            ) {
                 Text(text = "Next")
             }
         }
