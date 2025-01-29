@@ -1,2 +1,2 @@
 # ArtSpaceApp
- My SpaceArtGallery implementation
+ My SpaceArtGallery implementation with Kotlin for Android, with Multiple size screens support
